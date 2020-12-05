@@ -450,7 +450,7 @@ class CDR_Data
         $client  = new BeanstalkClient(WorkerCdr::SELECT_CDR_TUBE);
         $message = $client->request(json_encode($filter), 2);
         if ($message == false) {
-            Util::sysLogMsg('miko_ajam', "Error get data from queue 'WorkerCdr::SELECT_CDR_TUBE'. ");
+            Util::sysLogMsg('miko_ajam', "Error get data from queue 'WorkerCdr::SELECT_CDR_TUBE'. ", LOG_ERR);
             $this->q_done("[]");
         } else {
             $result_data = "[]";
@@ -471,6 +471,6 @@ class CDR_Data
 
 try {
     $d = new CDR_Data($argv);
-} catch (Exception $e) {
-    Util::sysLogMsg('miko_ajam', $e->getMessage());
+} catch (\Throwable $e) {
+    Util::sysLogMsg('miko_ajam', $e->getMessage(),LOG_ERR);
 }

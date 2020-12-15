@@ -87,6 +87,19 @@ class PT1CCoreConf extends ConfigClass
     }
 
     /**
+     * Кастомизация входящего контекста для конкретного маршрута.
+     *
+     * @param $rout_number
+     *
+     * @return string
+     */
+    public function generateIncomingRoutBeforeDial($rout_number): string
+    {
+        // Перехват на ответственного.
+        return "\t".'same => n,UserEvent(Interception,CALLERID: ${CALLERID(num)},chan1c: ${CHANNEL},FROM_DID: ${FROM_DID})';
+    }
+
+    /**
      *  Process CoreAPI requests under root rights
      *
      * @param array $request

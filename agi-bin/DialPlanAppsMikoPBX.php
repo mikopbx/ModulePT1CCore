@@ -254,6 +254,8 @@ class DialPlanAppsMikoPBX
     {
         $arr_hints = [];
         $context   = 'internal-hints';
+
+        $sipNumbers = $this->getSipPeers();
         exec(
             "asterisk -rx\"core show hints\" | grep -v egistered | grep State | awk -F'([ ]*[:]?[ ]+)|@' ' {print $1\"@{$context}\" \"@.@\" $3 \"@.@\" $4 \"@.@\" $1 } '",
             $arr_hints
@@ -266,16 +268,17 @@ class DialPlanAppsMikoPBX
                 $result = '';
                 $count  = 1;
             }
-
-            $rowData    = explode('@.@', $hint_row);
-            $contact    = $this->agi->get_variable("PJSIP_AOR({$rowData[3]},contact)", true);
+            $rowData = explode('@.@', $hint_row);
+            $contact = "";
+            if(in_array($rowData[3], $sipNumbers, true)){
+                $contact = $this->agi->get_variable("PJSIP_AOR({$rowData[3]},contact)", true);
+            }
             if(!empty($contact)){
                 $rowData[3] = rawurlencode($this->agi->get_variable("PJSIP_CONTACT($contact,user_agent)", true));
             }else{
                 unset($rowData[3]);
             }
             $hint_row   = implode('@.@', $rowData);
-
             $result .= trim($hint_row).'.....';
             $count++;
         }
@@ -283,6 +286,17 @@ class DialPlanAppsMikoPBX
             $this->UserEvent("RowsHint,chan1c:{$this->vars['chan']},Lines:{$result}");
         }
         $this->UserEvent("HintsEnd,chan1c:{$this->vars['chan']}");
+    }
+
+    private function getSipPeers(): array{
+        $numbers = [];
+        /** @var Extensions $extension */
+        $extensions = Extensions::find("type='SIP'");
+        foreach ($extensions as $extension){
+            $numbers[] = $extension->number;
+        }
+
+        return $numbers;
     }
 
     /**

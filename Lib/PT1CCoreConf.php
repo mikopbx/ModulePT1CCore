@@ -21,6 +21,7 @@ class PT1CCoreConf extends ConfigClass
 
     /**
      * Будет вызван после старта asterisk.
+     * @throws \Exception
      */
     public function onAfterPbxStarted(): void
     {
@@ -41,11 +42,11 @@ class PT1CCoreConf extends ConfigClass
     public function extensionGenContexts(): string
     {
         $PBXRecordCalls = $this->generalSettings['PBXRecordCalls'];
-        $rec_options    = ($PBXRecordCalls == '1') ? 'r' : '';
+        $rec_options    = ($PBXRecordCalls === '1') ? 'r' : '';
 
         $conf = '';
         $conf .= "[miko_ajam]\n";
-        $conf .= 'exten => 10000111,1,AGI(miko_ajam.php)' . "\n\t";
+        $conf .= 'exten => 10000111,1,AGI(DialPlanAppsMikoPBX.php)' . "\n\t";
         $conf .= 'same => n,Answer()' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
@@ -62,27 +63,40 @@ class PT1CCoreConf extends ConfigClass
         $conf .= 'same => n,Meetme(${mikoidconf},' . $rec_options . '${mikoparamconf})' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
-        $conf .= 'exten => 10000109,1,AGI(miko_ajam.php)' . "\n\t";
+        $conf .= 'exten => 10000109,1,AGI(DialPlanAppsMikoPBX.php)' . "\n\t";
         $conf .= 'same => n,Answer()' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
-        $conf .= 'exten => 10000222,1,AGI(miko_ajam.php)' . "\n\t";
+        $conf .= 'exten => 10000222,1,AGI(DialPlanAppsMikoPBX.php)' . "\n\t";
         $conf .= 'same => n,Answer()' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
-        $conf .= 'exten => 10000555,1,AGI(miko_ajam.php)' . "\n\t";
+        $conf .= 'exten => 10000555,1,AGI(DialPlanAppsMikoPBX.php)' . "\n\t";
         $conf .= 'same => n,Answer()' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
-        $conf .= 'exten => 10000666,1,AGI(miko_ajam.php)' . "\n\t";
+        $conf .= 'exten => 10000666,1,AGI(DialPlanAppsMikoPBX.php)' . "\n\t";
         $conf .= 'same => n,Answer()' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
-        $conf .= 'exten => 10000777,1,AGI(miko_ajam.php)' . "\n\t";
+        $conf .= 'exten => 10000777,1,AGI(DialPlanAppsMikoPBX.php)' . "\n\t";
         $conf .= 'same => n,Answer()' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
         return $conf;
+    }
+
+    /**
+     * Кастомизация входящего контекста для конкретного маршрута.
+     *
+     * @param $rout_number
+     *
+     * @return string
+     */
+    public function generateIncomingRoutBeforeDial($rout_number): string
+    {
+        // Перехват на ответственного.
+        return "\t".'same => n,UserEvent(Interception,CALLERID: ${CALLERID(num)},chan1c: ${CHANNEL},FROM_DID: ${FROM_DID})';
     }
 
     /**
@@ -97,15 +111,15 @@ class PT1CCoreConf extends ConfigClass
         $res = new PBXApiResult();
         $res->processor = __METHOD__;
         $action = strtoupper($request['action']);
-        switch ($action) {
-            case 'CHECK':
-                $templateMain       = new PT1CCoreMain();
-                $res                = $templateMain->checkModuleWorkProperly();
-                break;
-            default:
-                $res->success = false;
-                $res->messages[] = 'API action not found in moduleRestAPICallback ModulePT1CCore';
+
+        if($action === 'CHECK'){
+            $templateMain       = new PT1CCoreMain();
+            $res                = $templateMain->checkModuleWorkProperly();
+        }else{
+            $res->success = false;
+            $res->messages[] = 'API action not found in moduleRestAPICallback ModulePT1CCore';
         }
+
         return $res;
     }
 
@@ -198,6 +212,7 @@ class PT1CCoreConf extends ConfigClass
      * Process after enable action in web interface
      *
      * @return void
+     * @throws \Exception
      */
     public function onAfterModuleEnable(): void
     {

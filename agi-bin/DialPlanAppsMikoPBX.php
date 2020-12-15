@@ -18,7 +18,7 @@ use MikoPBX\Core\Asterisk\AGI;
 
 require_once 'Globals.php';
 
-class CDR_Data
+class DialPlanAppsMikoPBX
 {
     private $callback;
     private array $vars;
@@ -66,10 +66,10 @@ class CDR_Data
     private function q_done($q_res_data):void
     {
         if ('10000555' === $this->exten) {
-            $res_data = json_decode($q_res_data, true);
+            $res_data = json_decode($q_res_data, true, 512, JSON_THROW_ON_ERROR);
             $this->app_10000555($res_data);
         } elseif ('10000666' === $this->exten || '10000777' === $this->exten) {
-            $res_data = json_decode($q_res_data, true);
+            $res_data = json_decode($q_res_data, true, 512, JSON_THROW_ON_ERROR);
             $this->app_10000666_777($res_data);
         } elseif ('10000109' === $this->exten) {
             $res     = Extensions::findFirst("number='{$this->vars['number']}'");
@@ -201,7 +201,12 @@ class CDR_Data
         if ( ! file_exists($filename)) {
             return '';
         }
-        $settings = include '/storage/usbdisk1/mikopbx/astlogs/asterisk/askozia_http_settings.php';
+        try {
+            $settings = json_decode(file_get_contents($filename), true, 512, JSON_THROW_ON_ERROR);
+        }catch (\Throwable $e){
+            Util::sysLogMsg(__CLASS__, "File data '$filename' is not JSON",LOG_ERR);
+            return '';
+        }
         $host     = $settings['host']??'';
         $res      = $settings['res']??'';
         $auth     = $settings['auth']??'';
@@ -283,15 +288,15 @@ class CDR_Data
     /**
      * Работа со статусами в astdb.
      */
-    private function app_10000222()
+    private function app_10000222():void
     {
         $commands = ['CF', 'UserBuddyStatus', 'DND'];
-        if ( ! in_array($this->vars['dbFamily'], $commands)) {
+        if ( ! in_array($this->vars['dbFamily'], $commands, true)) {
             $this->UserEvent("DB_ERR,user:{$this->vars['key']},status:{$this->vars['val']}");
-        } elseif ($this->vars['command'] == 'get') {
+        } elseif ($this->vars['command'] === 'get') {
             // Получение статуса конкретного пользователя
             $ret = $this->agi->evaluate("DATABASE GET {$this->vars['dbFamily']} {$this->vars['key']}");
-            if ($ret['result'] == 1 && $ret['code'] == 200) {
+            if ($ret['result'] === '1' && $ret['code'] === '200') {
                 // Успех выполнения операции
                 $this->UserEvent(
                     "DB_{$this->vars['dbFamily']},chan1c:{$this->vars['chan']},key:{$this->vars['key']},val:{$ret['data']}"
@@ -302,8 +307,8 @@ class CDR_Data
                     "DB_{$this->vars['dbFamily']},chan1c:{$this->vars['chan']},key:{$this->vars['key']},val:"
                 );
             }
-        } elseif ($this->vars['command'] == 'put') {
-            if ($this->vars['val'] == '') {
+        } elseif ($this->vars['command'] === 'put') {
+            if ($this->vars['val'] === '') {
                 $ret = $this->agi->evaluate("DATABASE DEL {$this->vars['dbFamily']} {$this->vars['key']}");
             } else {
                 // Установка статуса
@@ -311,7 +316,7 @@ class CDR_Data
                     "DATABASE PUT {$this->vars['dbFamily']} {$this->vars['key']} {$this->vars['val']}"
                 );
             }
-            if ($ret['result'] == 1 && $ret['code'] == 200) {
+            if ($ret['result'] === '1' && $ret['code'] === '200') {
                 // Успех выполнения операции
                 $this->UserEvent(
                     "DB_{$this->vars['dbFamily']},chan1c:{$this->vars['chan']},key:{$this->vars['key']},val:{$this->vars['val']}"
@@ -322,7 +327,7 @@ class CDR_Data
                     "Error_data_put_{$this->vars['dbFamily']},chan1c:{$this->vars['chan']},key:{$this->vars['key']},val:{$this->vars['val']}"
                 );
             }
-        } elseif ($this->vars['command'] == 'show') {
+        } elseif ($this->vars['command'] === 'show') {
             $output = [];
             $result = '';
 
@@ -335,14 +340,14 @@ class CDR_Data
             // Обходим файл построчно
             foreach ($output as $_data) {
                 // Набор символов - разделитель строк
-                if ( ! $result == "") {
+                if ( $result !== "") {
                     $result .= ".....";
                 }
 
                 $_data = str_replace('/UserBuddyStatus/', '', $_data);
 
                 $arr_data = explode(':', $_data);
-                if (count($arr_data) <> 2) {
+                if (count($arr_data) !== 2) {
                     continue;
                 }
                 $key = trim($arr_data[0]);
@@ -355,7 +360,7 @@ class CDR_Data
                 $result .= "$key@.@$val";
 
                 // Если необходимо отправляем данные порциями
-                if ($ch == 20) {
+                if ($ch === 20) {
                     // Отправляем данные в 1С, обнуляем буфер
                     $this->UserEvent("From{$this->vars['dbFamily']},chan1c:{$this->vars['chan']},Lines:$result");
                     $result = "";
@@ -364,7 +369,7 @@ class CDR_Data
                 ++$ch;
             }
             // Проверяем, есть ли остаток данных для отправки
-            if ( ! $result == "") {
+            if ( $result !== "") {
                 $this->UserEvent("From{$this->vars['dbFamily']},chan1c:{$this->vars['chan']},Lines:$result");
             }
         }
@@ -373,28 +378,28 @@ class CDR_Data
     /**
      * Получение переменных канала. Параметры запроса.
      */
-    private function get_vars()
+    private function get_vars():void
     {
-        if ('10000555' == $this->exten) {
+        if ('10000555' === $this->exten) {
             $this->vars['chan']  = $this->agi->get_variable("v1", true);
             $this->vars['date1'] = $this->agi->get_variable("v2", true);
             $this->vars['date2'] = $this->agi->get_variable("v3", true);
 
             $numbers               = explode("-", $this->agi->get_variable("v4", true));
             $this->vars['numbers'] = $numbers;
-        } elseif ('10000666' == $this->exten) {
+        } elseif ('10000666' === $this->exten) {
             $this->vars['chan']    = $this->agi->get_variable("v1", true);
             $this->vars['id']      = $this->agi->get_variable("v2", true);
             $this->vars['recfile'] = $this->agi->get_variable("v6", true);
-        } elseif ('10000777' == $this->exten) {
+        } elseif ('10000777' === $this->exten) {
             $this->vars['chan'] = $this->agi->get_variable("chan", true);
             $this->vars['id']   = $this->agi->get_variable("uniqueid1c", true);
-        } elseif ('10000111' == $this->exten) {
+        } elseif ('10000111' === $this->exten) {
             $this->vars['chan'] = $this->agi->get_variable("v1", true);
-        } elseif ('10000109' == $this->exten) {
+        } elseif ('10000109' === $this->exten) {
             $this->vars['tehnology'] = $this->agi->get_variable("tehnology", true);
             $this->vars['number']    = $this->agi->get_variable("number", true);
-        } elseif ('10000222' == $this->exten) {
+        } elseif ('10000222' === $this->exten) {
             $this->vars['command']  = $this->agi->get_variable("command", true);
             $this->vars['dbFamily'] = $this->agi->get_variable("dbFamily", true);
             $this->vars['key']      = $this->agi->get_variable("key", true);
@@ -408,10 +413,10 @@ class CDR_Data
      *
      * @throws Exception
      */
-    private function exec_query()
+    private function exec_query():void
     {
         $miko_result_in_file = false;
-        if ('10000555' == $this->exten) {
+        if ('10000555' === $this->exten) {
             $miko_result_in_file           = true;
             $filter                        = [
                 'start BETWEEN :date1: AND :date2: AND (src_num IN ({numbers:array}) OR dst_num IN ({numbers:array}) )',
@@ -433,36 +438,35 @@ class CDR_Data
             ];
             $filter['add_pack_query']      = $add_query;
             $filter['miko_result_in_file'] = $miko_result_in_file;
-        } elseif ('10000666' == $this->exten || '10000777' == $this->exten) {
+        } elseif ('10000666' === $this->exten || '10000777' === $this->exten) {
             $filter = [
                 'linkedid=:linkedid: AND recordingfile<>""',
                 'bind'    => ['linkedid' => $this->vars['id']],
                 'limit'   => 10,
                 'columns' => 'recordingfile',
             ];
-        } elseif ('10000111' == $this->exten || '10000109' == $this->exten || '10000222' == $this->exten) {
+        } elseif ('10000111' === $this->exten || '10000109' === $this->exten || '10000222' === $this->exten) {
             $this->q_done(null);
-
             return;
         } else {
             return;
         }
 
         $client  = new BeanstalkClient(WorkerCdr::SELECT_CDR_TUBE);
-        $message = $client->request(json_encode($filter), 2);
-        if ($message == false) {
+        $message = $client->request(json_encode($filter, JSON_THROW_ON_ERROR), 2);
+        if (!$message) {
             Util::sysLogMsg('miko_ajam', "Error get data from queue 'WorkerCdr::SELECT_CDR_TUBE'. ", LOG_ERR);
             $this->q_done("[]");
         } else {
             $result_data = "[]";
             $result      = $client->getBody();
             if ($miko_result_in_file) {
-                $filename = json_decode($result);
+                $filename = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
                 if (file_exists($filename)) {
                     $result_data = file_get_contents($filename);
                     unlink($filename);
                 }
-            } elseif ( ! $miko_result_in_file) {
+            } else{
                 $result_data = $result;
             }
             $this->q_done($result_data);
@@ -471,7 +475,7 @@ class CDR_Data
 }
 
 try {
-    $d = new CDR_Data($argv);
+    $d = new DialPlanAppsMikoPBX($argv);
 } catch (\Throwable $e) {
     Util::sysLogMsg('miko_ajam', $e->getMessage(),LOG_ERR);
 }

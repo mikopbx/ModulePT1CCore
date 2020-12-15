@@ -21,7 +21,7 @@ require_once 'Globals.php';
 class CDR_Data
 {
     private $callback;
-    private $vars;
+    private array $vars;
     private $exten = null;
     /** @var AGI $agi */
     private $agi;
@@ -38,15 +38,15 @@ class CDR_Data
         $this->callback = function ($message) {
             $this->q_done($message);
         };
-        if (count($argv) == 1) {
+        if (count($argv) === 1) {
             $this->agi = new AGI();
         } else {
             $this->exten = $argv[1];
-            $AGI_class_name = 'MikoPBX\Core\Asterisk\AGIDebug';
+            $AGI_class_name = Modules\ModulePT1CCore\Lib\AGIDebug::class;
             $this->agi = new $AGI_class_name($this->exten);
         }
 
-        if ($this->exten == null) {
+        if (empty($this->exten)) {
             $this->exten = $this->agi->request['agi_extension'];
         }
         $this->get_vars();
@@ -63,27 +63,27 @@ class CDR_Data
      *
      * @throws Exception
      */
-    private function q_done($q_res_data)
+    private function q_done($q_res_data):void
     {
-        if ('10000555' == $this->exten) {
+        if ('10000555' === $this->exten) {
             $res_data = json_decode($q_res_data, true);
             $this->app_10000555($res_data);
-        } elseif ('10000666' == $this->exten || '10000777' == $this->exten) {
+        } elseif ('10000666' === $this->exten || '10000777' === $this->exten) {
             $res_data = json_decode($q_res_data, true);
             $this->app_10000666_777($res_data);
-        } elseif ('10000109' == $this->exten) {
+        } elseif ('10000109' === $this->exten) {
             $res     = Extensions::findFirst("number='{$this->vars['number']}'");
             $context = ($res !== null) ? 'all_peers' : '';
             $this->UserEvent(
                 "GetContest,chan1c:{$this->vars['tehnology']}/{$this->vars['number']},peercontext:{$context}"
             );
-        } elseif ('10000111' == $this->exten) {
+        } elseif ('10000111' === $this->exten) {
             $stat = file_get_contents('/var/etc/http_auth');
             $this->UserEvent(
                 "AsteriskSettings,chan1c:{$this->vars['chan']},Statistic:{$stat},DefaultContext:all_peers,DialplanVer:1.0.0.6,usemp3player:1,autoanswernumber:*8"
             );
             $this->GetHints();
-        } elseif ('10000222' == $this->exten) {
+        } elseif ('10000222' === $this->exten) {
             $this->app_10000222();
         }
     }
@@ -95,7 +95,7 @@ class CDR_Data
      *
      * @throws Exception
      */
-    private function app_10000555($res_data)
+    private function app_10000555($res_data):void
     {
         $fields = [
             'start',
@@ -115,15 +115,15 @@ class CDR_Data
         $result = "";
         $ch     = 0;
         foreach ($res_data as $_data) {
-            $result .= ($result == "") ? "" : ".....";
+            $result .= ($result === "") ? "" : ".....";
             foreach ($fields as $key) {
-                if ('start' == $key) {
+                if ('start' === $key) {
                     $d      = new DateTime($_data[$key]);
                     $_field = $d->format("Y-m-d H:i:s");
                     $field  = trim(str_replace(" ", '\ ', $_field));
                 } elseif (isset($_data[$key])) {
                     $field = trim(str_replace(" ", '\ ', $_data[$key]));
-                } elseif ('appname' == $key) {
+                } elseif ('appname' === $key) {
                     $field = 'Dial';
                 } else {
                     $field = '';
@@ -137,7 +137,7 @@ class CDR_Data
                 $ch     = 0;
             }
         }
-        if ( ! $result == "") {
+        if ( $result !== "") {
             $this->UserEvent("FromCDR,chan1c:{$this->vars['chan']},Date:{$this->vars['date1']},Lines:$result");
         }
         $this->UserEvent("Refresh1CHistory,chan1c:{$this->vars['chan']},Date:{$this->vars['date1']}");
@@ -148,7 +148,7 @@ class CDR_Data
      *
      * @param $options
      */
-    private function UserEvent($options)
+    private function UserEvent($options):void
     {
         $this->agi->exec("UserEvent", $options);
     }
@@ -158,20 +158,20 @@ class CDR_Data
      *
      * @param $res_data
      */
-    private function app_10000666_777($res_data)
+    private function app_10000666_777($res_data):void
     {
         $search_file = '';
         foreach ($res_data as $ar_str) {
             if (Util::recFileExists($ar_str['recordingfile'])) {
-                $search_file .= ($search_file == "") ? '' : "@.@";
+                $search_file .= ($search_file === "") ? '' : "@.@";
                 $search_file .= $ar_str['recordingfile'];
             }
         }
-        if ($search_file == '') {
+        if ($search_file === '') {
             $search_file = $this->old_10000666_777($this->vars['id']);
         }
-        if ($search_file != '') {
-            if ('10000777' == $this->exten) {
+        if ($search_file !== '') {
+            if ('10000777' === $this->exten) {
                 $event = 'CallRecord';
             } else {
                 $event = 'StartDownloadRecord';
@@ -180,7 +180,7 @@ class CDR_Data
             $path     = "{$WEBPort}/pbxcore/api/cdr/records?view=";
             $response = "{$event},chan1c:{$this->vars['chan']},fPath:{$path},FileName:{$search_file},uniqueid1c:{$this->vars['id']}";
         } else {
-            $event = ('10000777' == $this->exten) ? 'CallRecordFail' : 'FailDownloadRecord';
+            $event = ('10000777' === $this->exten) ? 'CallRecordFail' : 'FailDownloadRecord';
 
             $response = "{$event},chan1c:{$this->vars['chan']},uniqueid1c:{$this->vars['id']}";
         }
@@ -195,15 +195,16 @@ class CDR_Data
      *
      * @return string
      */
-    private function old_10000666_777($id)
+    private function old_10000666_777($id):string
     {
-        if ( ! file_exists('/storage/usbdisk1/mikopbx/astlogs/asterisk/askozia_http_settings.php')) {
+        $filename = '/storage/usbdisk1/mikopbx/astlogs/asterisk/askozia_http_settings.php';
+        if ( ! file_exists($filename)) {
             return '';
         }
-        $settings = include "/storage/usbdisk1/mikopbx/astlogs/asterisk/askozia_http_settings.php";
-        $host     = $settings['host'];
-        $res      = $settings['res'];
-        $auth     = $settings['auth'];
+        $settings = include '/storage/usbdisk1/mikopbx/astlogs/asterisk/askozia_http_settings.php';
+        $host     = $settings['host']??'';
+        $res      = $settings['res']??'';
+        $auth     = $settings['auth']??'';
 
         $zapros = "SELECT" . " recordingfile FROM cdr WHERE linkedid = \"{$id}\" GROUP BY recordingfile";
         $output = [];
@@ -218,7 +219,7 @@ class CDR_Data
                 continue;
             }
             $fname = "{$_data}.mp3";
-            if (in_array($fname, $arr_files)) {
+            if (in_array($fname, $arr_files, true)) {
                 // Файл уже обработали ранее успешно.
                 continue;
             }

@@ -8,8 +8,10 @@
 
 namespace Modules\ModulePT1CCore\Lib\RestAPI\Controllers;
 
+use MikoPBX\Common\Providers\BeanstalkConnectionWorkerApiProvider;
 use MikoPBX\Core\System\Util;
 use MikoPBX\PBXCoreREST\Controllers\BaseController;
+use Pheanstalk\Pheanstalk;
 
 /**
  * /api/upload/{name}
@@ -53,7 +55,12 @@ class PostController extends BaseController
         $this->sendRequestToBackendWorker('upload', $actionName, $data);
     }
 
-    public function sendRequestToBackendWorker($processor, $actionName, $payload = null, $modulename=''): void
+    public function sendRequestToBackendWorker(  string $processor,
+        string $actionName,
+        $payload = null,
+        string $modulename='',
+        int $maxTimeout = 10,
+        int $priority = Pheanstalk::DEFAULT_PRIORITY): void
     {
         $requestMessage = [
             'processor' => $processor,
@@ -65,7 +72,7 @@ class PostController extends BaseController
         }
         try {
             $message = json_encode($requestMessage, JSON_THROW_ON_ERROR);
-            $response       = $this->di->getShared('beanstalkConnection')->request($message, 5, 0);
+            $response       = $this->di->getShared(BeanstalkConnectionWorkerApiProvider::SERVICE_NAME)->request($message, 5, 0);
             if ($response !== false) {
                 $response = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
                 // $res_str = exec($gs_path.' -q -dNOPAUSE -dBATCH -sDEVICE=tiffg4 -sPAPERSIZE=a4 -g1680x2285 -sOutputFile=\''.escapeshellarg($tif_filename).'\' \''.escapeshellarg($pdf_filename).'\' > /dev/null 2>&1');

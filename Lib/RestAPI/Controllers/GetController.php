@@ -40,7 +40,7 @@ class GetController extends BaseController
         } else {
             $result   = json_decode($message, true);
             $arr_data = [];
-            if (file_exists($result)) {
+            if (is_string($result) && file_exists($result)) {
                 $arr_data = json_decode(file_get_contents($result), true);
                 @unlink($result);
             }

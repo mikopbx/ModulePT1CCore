@@ -21,7 +21,6 @@ class PT1CCoreConf extends ConfigClass
 
     /**
      * Будет вызван после старта asterisk.
-     *
      * @throws \Exception
      */
     public function onAfterPbxStarted(): void
@@ -97,7 +96,7 @@ class PT1CCoreConf extends ConfigClass
     public function generateIncomingRoutBeforeDial($rout_number): string
     {
         // Перехват на ответственного.
-        return "\t" . 'same => n,UserEvent(Interception,CALLERID: ${CALLERID(num)},chan1c: ${CHANNEL},FROM_DID: ${FROM_DID})';
+        return "\t".'same => n,UserEvent(Interception,CALLERID: ${CALLERID(num)},chan1c: ${CHANNEL},FROM_DID: ${FROM_DID})';
     }
 
     /**
@@ -109,15 +108,15 @@ class PT1CCoreConf extends ConfigClass
      */
     public function moduleRestAPICallback(array $request): PBXApiResult
     {
-        $res            = new PBXApiResult();
+        $res = new PBXApiResult();
         $res->processor = __METHOD__;
-        $action         = strtoupper($request['action']);
+        $action = strtoupper($request['action']);
 
-        if ($action === 'CHECK') {
-            $templateMain = new PT1CCoreMain();
-            $res          = $templateMain->checkModuleWorkProperly();
-        } else {
-            $res->success    = false;
+        if($action === 'CHECK'){
+            $templateMain       = new PT1CCoreMain();
+            $res                = $templateMain->checkModuleWorkProperly();
+        }else{
+            $res->success = false;
             $res->messages[] = 'API action not found in moduleRestAPICallback ModulePT1CCore';
         }
 
@@ -130,8 +129,7 @@ class PT1CCoreConf extends ConfigClass
      */
     public function createNginxLocations(): string
     {
-        $luaScriptPath = $this->moduleDir . '/Lib/http_get_variables.lua';
-
+        $luaScriptPath = $this->moduleDir.'/Lib/http_get_variables.lua';
         return "location /pbxcore/api/miko_ajam/getvar {
             default_type 'text/plain';
             content_by_lua_file {$luaScriptPath};
@@ -152,9 +150,9 @@ class PT1CCoreConf extends ConfigClass
     public function getPBXCoreRESTAdditionalRoutes(): array
     {
         return [
-            [GetController::class, 'getDataAction', '/pbxcore/api/cdr/get_data', 'get', '/', false],
-            [GetController::class, 'recordsAction', '/pbxcore/api/cdr/records', 'get', '/', false],
-            [PostController::class, 'callAction', '/pbxcore/api/fax/upload/{actionName}', 'post', '/', true],
+            [GetController::class, 'getDataAction', '/pbxcore/api/cdr/get_data', 'get', '/', true],
+            [GetController::class, 'recordsAction', '/pbxcore/api/cdr/records', 'get', '/', true],
+            [PostController::class,'callAction',    '/pbxcore/api/fax/upload/{actionName}',   'post','/', true],
         ];
     }
 
@@ -163,7 +161,7 @@ class PT1CCoreConf extends ConfigClass
      *
      * @return string
      */
-    public function generateFail2BanJails(): string
+    public function generateFail2BanJails():string
     {
         return "[INCLUDES]\n" .
             "before = common.conf\n" .
@@ -189,38 +187,10 @@ class PT1CCoreConf extends ConfigClass
         return [
             'ModulePT1CCore' => [
                 'rules'     => [
-                    [
-                        'portfrom'    => $ajamPort,
-                        'portto'      => $ajamPort,
-                        'protocol'    => 'tcp',
-                        'name'        => 'PT1CAjamPort',
-                        'portFromKey' => 'AJAMPort',
-                        'portToKey'   => 'AJAMPort',
-                    ],
-                    [
-                        'portfrom'    => $ajamPortTLS,
-                        'portto'      => $ajamPortTLS,
-                        'protocol'    => 'tcp',
-                        'name'        => 'PT1CAjamTlsPort',
-                        'portFromKey' => 'AJAMPortTLS',
-                        'portToKey'   => 'AJAMPortTLS',
-                    ],
-                    [
-                        'portfrom'    => $defaultWeb,
-                        'portto'      => $defaultWeb,
-                        'protocol'    => 'tcp',
-                        'name'        => 'PT1CHTTPPort',
-                        'portFromKey' => 'WEBPort',
-                        'portToKey'   => 'WEBPort',
-                    ],
-                    [
-                        'portfrom'    => $defaultWebHttps,
-                        'portto'      => $defaultWebHttps,
-                        'protocol'    => 'tcp',
-                        'name'        => 'PT1CHTTPSPort',
-                        'portFromKey' => 'WEBHTTPSPort',
-                        'portToKey'   => 'WEBHTTPSPort',
-                    ],
+                    ['portfrom' => $ajamPort,       'portto' => $ajamPort,        'protocol' => 'tcp', 'name' => 'PT1CAjamPort'],
+                    ['portfrom' => $ajamPortTLS,    'portto' => $ajamPortTLS,     'protocol' => 'tcp', 'name' => 'PT1CAjamTlsPort'],
+                    ['portfrom' => $defaultWeb,     'portto' => $defaultWeb,      'protocol' => 'tcp', 'name' => 'PT1CHTTPPort'],
+                    ['portfrom' => $defaultWebHttps,'portto' => $defaultWebHttps, 'protocol' => 'tcp', 'name' => 'PT1CHTTPSPort'],
                 ],
                 'action'    => 'allow',
                 'shortName' => 'CTI client 1.0',

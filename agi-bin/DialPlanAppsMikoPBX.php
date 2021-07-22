@@ -80,7 +80,7 @@ class DialPlanAppsMikoPBX
         } elseif ('10000111' === $this->exten) {
             $stat = file_get_contents('/var/etc/http_auth');
             $this->UserEvent(
-                "AsteriskSettings,chan1c:{$this->vars['chan']},Statistic:{$stat},DefaultContext:all_peers,DialplanVer:1.0.0.6,usemp3player:1,autoanswernumber:*8"
+                "AsteriskSettings,chan1c:{$this->vars['chan']},Statistic:{$stat},DefaultContext:all_peers,DialplanVer:1.0.0.8,usemp3player:1,autoanswernumber:*8"
             );
             $this->GetHints();
         } elseif ('10000222' === $this->exten) {

@@ -83,6 +83,26 @@ class PT1CCoreConf extends ConfigClass
         $conf .= 'same => n,Answer()' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
+        $conf .= '[miko-ajam-originate]' . "\n";
+        $conf .= 'include => internal-originate' . "\n\n";
+
+        $conf .= '[miko-ajam-goto]' . "\n";
+        $conf .= 'exten => _[0-9*#+a-zA-Z][0-9*#+a-zA-Z]!,1,Wait(0.2)' . "\n\t";
+        $conf .=   'same => n,ExecIf($["${mikoContext}x" = "x"]?Set(mikoContext=all_peers))' . "\n\t";
+        $conf .=   'same => n,ExecIf($["${ORIGINATE_SRC_CHANNEL}x" != "x"]?ChannelRedirect(${ORIGINATE_SRC_CHANNEL},${mikoContext},${EXTEN},1))' . "\n\t";
+        $conf .=   'same => n,Hangup' . "\n";
+        $conf .= 'exten => failed,1,Hangup' . "\n\n";
+
+        $conf .= '[miko-ajam-spy]' . "\n";
+        $conf .= 'exten => _[0-9*#+a-zA-Z][0-9*#+a-zA-Z]!,1,Answer()' . "\n\t";
+        $conf .=   'same => n,ExecIf($["${SPY_ARGS}x" != "x"]?ChanSpy(${DST_CHANNEL},${SPY_ARGS}))' . "\n\t";
+        $conf .=   'same => n,Hangup' . "\n\n";
+
+        $conf .= '[miko-ajam-playback-mp3]' . "\n";
+        $conf .= 'exten => _[0-9*#+a-zA-Z][0-9*#+a-zA-Z]!,1,Answer()' . "\n\t";
+        $conf .=   'same => n,ExecIf($["${FILENAME}x" != "x"]?MP3Player(${FILENAME}))' . "\n";
+        $conf .=   'same => n,Hangup' . "\n\n";
+
         return $conf;
     }
 

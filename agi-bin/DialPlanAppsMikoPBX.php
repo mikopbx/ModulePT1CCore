@@ -80,7 +80,7 @@ class DialPlanAppsMikoPBX
         } elseif ('10000111' === $this->exten) {
             $stat = file_get_contents('/var/etc/http_auth');
             $this->UserEvent(
-                "AsteriskSettings,chan1c:{$this->vars['chan']},Statistic:{$stat},DefaultContext:all_peers,DialplanVer:1.0.0.6,usemp3player:1,autoanswernumber:*8"
+                "AsteriskSettings,chan1c:{$this->vars['chan']},Statistic:{$stat},DefaultContext:all_peers,DialplanVer:1.0.0.8,usemp3player:1,autoanswernumber:*8"
             );
             $this->GetHints();
         } elseif ('10000222' === $this->exten) {
@@ -247,6 +247,26 @@ class DialPlanAppsMikoPBX
         return implode("@.@", $arr_files);
     }
 
+    private function normalize_hint(&$str):void{
+        $hint_val = '';
+        $arr_val = explode('&', $str);
+        foreach ($arr_val as $val){
+            if( strrpos($val, 'SIP/') === FALSE &&
+                strrpos($val, 'PJSIP/') === FALSE &&
+                strrpos($val, 'IAX2/') === FALSE &&
+                strrpos($val, 'DAHDI/') === FALSE){
+                continue;
+            }
+
+            if($hint_val !== ''){
+                $hint_val.='&';
+            }
+            $hint_val.=$val;
+        }
+        $str = $hint_val;
+    }
+
+
     /**
      * Собирает инвормацию по хинтам и оповещает о них в UserEvent.
      */
@@ -273,6 +293,7 @@ class DialPlanAppsMikoPBX
             if(in_array($rowData[3], $sipNumbers, true)){
                 $contact = $this->agi->get_variable("PJSIP_AOR({$rowData[3]},contact)", true);
             }
+            $this->normalize_hint($rowData[1]);
             if(!empty($contact)){
                 $rowData[3] = rawurlencode($this->agi->get_variable("PJSIP_CONTACT($contact,user_agent)", true));
             }else{

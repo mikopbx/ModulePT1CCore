@@ -259,7 +259,7 @@ class DialPlanAppsMikoPBX
             }
 
             if($hint_val !== ''){
-                $hint_val.='&';
+                continue;
             }
             $hint_val.=$val;
         }

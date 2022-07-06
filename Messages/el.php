@@ -1,6 +1,6 @@
 <?php
 return [
-    'f2b_Jail_module_p_t1_c_core' => 'Σφάλματα κατά την εξουσιοδότηση πελατών CTI ή πάνελ 1C (Fail2ban)',
+    'f2b_Jail_module_p_t1_c_core' => 'Σφάλματα κατά την εξουσιοδότηση πελατών CTI ή πάνελ 1C',
     'fw_modulept1ccoreDescription' => 'CTI CLIENT - Πίνακας τηλεφωνίας 1.0 για 1C',
     'module_pt1c_core_LinksRussian' => 'Χρήσιμοι σύνδεσμοι (ρωσικά)',
     'module_pt1c_core_Forum' => 'Τόπος συζητήσεως',
@@ -10,7 +10,7 @@ return [
     'module_pt1c_coreDisconnected' => 'Η μονάδα απενεργοποιήθηκε',
     'module_pt1c_coreConnected' => 'Η μονάδα είναι συνδεδεμένη',
     'SubHeaderModulePT1CCore' => 'Μονάδα διαχείρισης κλήσεων από υπολογιστή',
-    'BreadcrumbModulePT1CCore' => 'Ενότητα PT1C Core',
+    'BreadcrumbModulePT1CCore' => 'Πίνακας τηλεφωνίας 1.0 για 1C',
     'mo_ModuleModulePT1CCore' => 'Πίνακας τηλεφωνίας 1.0 για 1C',
     /**
  * Copyright (C) MIKO LLC - All Rights Reserved

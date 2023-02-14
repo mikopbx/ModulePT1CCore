@@ -223,7 +223,7 @@ class DialPlanAppsMikoPBX
             if (empty($_data)) {
                 continue;
             }
-            $fname = "{$_data}.mp3";
+            $fname = "{$_data}.wav";
             if (in_array($fname, $arr_files, true)) {
                 // Файл уже обработали ранее успешно.
                 continue;
@@ -234,12 +234,13 @@ class DialPlanAppsMikoPBX
             }
             if ( ! file_exists($fname)) {
                 Util::mwMkdir(dirname($_data));
-                exec("curl  -s -f 'http://{$host}:23600{$res}{$_data}' -u {$auth} -I", $curl_output);
+                exec("curl  -s -f 'http://{$host}{$res}{$_data}' -u {$auth} -I", $curl_output);
                 if (stripos(implode('', $curl_output), 'attachment;') === false) {
                     file_put_contents("{$fname}.empty", '');
                     continue;
                 }
-                exec("curl -s -f 'http://{$host}:23600{$res}{$_data}' -u {$auth} --output '{$fname}'");
+                exec("curl -s -f 'http://{$host}{$res}{$_data}' -u {$auth} --output '{$fname}'");
+                exec("/sbin/wav2mp3.sh '{$_data}'");
             }
             $arr_files[] = $fname;
         }

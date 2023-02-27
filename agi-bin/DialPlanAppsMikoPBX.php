@@ -11,6 +11,7 @@
 
 use MikoPBX\Common\Models\Extensions;
 use MikoPBX\Common\Models\PbxSettings;
+use MikoPBX\Common\Models\Sip;
 use MikoPBX\Core\Asterisk\CdrDb;
 use MikoPBX\Core\System\{BeanstalkClient, Processes, Util};
 use MikoPBX\Core\Workers\WorkerCdr;
@@ -223,7 +224,7 @@ class DialPlanAppsMikoPBX
             if (empty($_data)) {
                 continue;
             }
-            $fname = "{$_data}.mp3";
+            $fname = "{$_data}.wav";
             if (in_array($fname, $arr_files, true)) {
                 // Файл уже обработали ранее успешно.
                 continue;
@@ -234,12 +235,13 @@ class DialPlanAppsMikoPBX
             }
             if ( ! file_exists($fname)) {
                 Util::mwMkdir(dirname($_data));
-                exec("curl  -s -f 'http://{$host}:23600{$res}{$_data}' -u {$auth} -I", $curl_output);
+                exec("curl  -s -f 'http://{$host}{$res}{$_data}' -u {$auth} -I", $curl_output);
                 if (stripos(implode('', $curl_output), 'attachment;') === false) {
                     file_put_contents("{$fname}.empty", '');
                     continue;
                 }
-                exec("curl -s -f 'http://{$host}:23600{$res}{$_data}' -u {$auth} --output '{$fname}'");
+                exec("curl -s -f 'http://{$host}{$res}{$_data}' -u {$auth} --output '{$fname}'");
+                exec("/sbin/wav2mp3.sh '{$_data}'");
             }
             $arr_files[] = $fname;
         }
@@ -274,7 +276,6 @@ class DialPlanAppsMikoPBX
     {
         $arr_hints = [];
         $context   = 'internal-hints';
-
         $sipNumbers = $this->getSipPeers();
         exec(
             "asterisk -rx\"core show hints\" | grep -v egistered | grep State | awk -F'([ ]*[:]?[ ]+)|@' ' {print $1\"@{$context}\" \"@.@\" $3 \"@.@\" $4 \"@.@\" $1 } '",
@@ -290,15 +291,18 @@ class DialPlanAppsMikoPBX
             }
             $rowData = explode('@.@', $hint_row);
             $contact = "";
-            if(in_array($rowData[3], $sipNumbers, true)){
-                $contact = $this->agi->get_variable("PJSIP_AOR({$rowData[3]},contact)", true);
+
+            if( isset($sipNumbers[$rowData[3]]) ){
+                $contact    = $this->agi->get_variable("PJSIP_AOR({$rowData[3]},contact)", true);
+                $rowData[4] = $sipNumbers[$rowData[3]];
             }
             $this->normalize_hint($rowData[1]);
             if(!empty($contact)){
                 $rowData[3] = rawurlencode($this->agi->get_variable("PJSIP_CONTACT($contact,user_agent)", true));
             }else{
-                unset($rowData[3]);
+                $rowData[3] = '';
             }
+
             $hint_row   = implode('@.@', $rowData);
             $result .= trim($hint_row).'.....';
             $count++;
@@ -309,14 +313,22 @@ class DialPlanAppsMikoPBX
         $this->UserEvent("HintsEnd,chan1c:{$this->vars['chan']}");
     }
 
+    /**
+     * Возвращает массив внутренних номеров.
+     * В качестве значения - разрешена ли запись.
+     * Ключ - номер телефона.
+     * @return array
+     */
     private function getSipPeers(): array{
         $numbers = [];
-        /** @var Extensions $extension */
-        $extensions = Extensions::find("type='SIP'");
-        foreach ($extensions as $extension){
-            $numbers[] = $extension->number;
+        $filter = [
+            'conditions' => 'type="peer"',
+            'columns'    => 'extension,enableRecording',
+        ];
+        $peers = Sip::find($filter);
+        foreach ($peers as $peer) {
+            $numbers[$peer->extension] = ($peer->enableRecording=== '0')?0:1;
         }
-
         return $numbers;
     }
 

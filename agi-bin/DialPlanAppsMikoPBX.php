@@ -446,6 +446,11 @@ class DialPlanAppsMikoPBX
         } elseif ('10000109' === $this->exten) {
             $this->vars['tehnology'] = $this->agi->get_variable("tehnology", true);
             $this->vars['number']    = $this->agi->get_variable("number", true);
+        } elseif ('10000112' === $this->exten) {
+            // Обновление информации по имени файла записи
+            $this->vars['filename']  = Util::trimExtensionForFile($this->agi->get_variable("v1", true)).'.mp3';
+            $this->vars['chan']      = $this->agi->get_variable("v2", true);
+            $this->vars['UNIQUEID']  = $this->agi->get_variable("IMPORT({$this->vars['chan']},pt1c_UNIQUEID)", true);
         } elseif ('10000222' === $this->exten) {
             $this->vars['command']  = $this->agi->get_variable("command", true);
             $this->vars['dbFamily'] = $this->agi->get_variable("dbFamily", true);
@@ -492,6 +497,15 @@ class DialPlanAppsMikoPBX
                 'limit'   => 10,
                 'columns' => 'recordingfile',
             ];
+        } elseif ('10000112' === $this->exten) {
+            $data = [
+                'UNIQUEID' => $this->vars['UNIQUEID'],
+                'recordingfile' => $this->vars['filename']
+            ];
+            $clientQueue = new BeanstalkClient(WorkerCdr::SELECT_CDR_TUBE);
+            $clientQueue->publish(json_encode($data), WorkerCdr::UPDATE_CDR_TUBE);
+            $this->q_done(null);
+            return;
         } elseif ('10000111' === $this->exten || '10000109' === $this->exten || '10000222' === $this->exten) {
             $this->q_done(null);
             return;

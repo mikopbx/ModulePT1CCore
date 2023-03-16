@@ -67,6 +67,10 @@ class PT1CCoreConf extends ConfigClass
         $conf .= 'same => n,Answer()' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
+        $conf .= 'exten => 10000112,1,AGI(DialPlanAppsMikoPBX.php)' . "\n\t";
+        $conf .= 'same => n,Answer()' . "\n\t";
+        $conf .= 'same => n,Hangup()' . "\n\n";
+
         $conf .= 'exten => 10000222,1,AGI(DialPlanAppsMikoPBX.php)' . "\n\t";
         $conf .= 'same => n,Answer()' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";

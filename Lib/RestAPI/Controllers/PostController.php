@@ -1,5 +1,23 @@
 <?php
 /*
+ * MikoPBX - free phone system for small business
+ * Copyright © 2017-2023 Alexey Portnov and Nikolay Beketov
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*
  * Copyright © MIKO LLC - All Rights Reserved
  * Unauthorized copying of this file, via any medium is strictly prohibited
  * Proprietary and confidential
@@ -11,6 +29,8 @@ namespace Modules\ModulePT1CCore\Lib\RestAPI\Controllers;
 use MikoPBX\Common\Providers\BeanstalkConnectionWorkerApiProvider;
 use MikoPBX\Core\System\Util;
 use MikoPBX\PBXCoreREST\Controllers\BaseController;
+use MikoPBX\PBXCoreREST\Lib\FilesManagementProcessor;
+use MikoPBX\PBXCoreREST\Lib\PbxExtensionsProcessor;
 use Pheanstalk\Pheanstalk;
 
 /**
@@ -50,9 +70,9 @@ class PostController extends BaseController
                     return;
                 }
             }
-            $actionName = 'uploadResumable';
+            $actionName = 'uploadFile';
         }
-        $this->sendRequestToBackendWorker('upload', $actionName, $data);
+        $this->sendRequestToBackendWorker(FilesManagementProcessor::class, $actionName, $data);
     }
 
     public function sendRequestToBackendWorker(  string $processor,
@@ -67,7 +87,7 @@ class PostController extends BaseController
             'data'      => $payload,
             'action'    => $actionName
         ];
-        if ($processor==='modules'){
+        if ($processor === PbxExtensionsProcessor::class){
             $requestMessage['module'] = $modulename;
         }
         try {

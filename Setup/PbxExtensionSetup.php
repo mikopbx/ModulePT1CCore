@@ -26,6 +26,7 @@
 
 namespace Modules\ModulePT1CCore\Setup;
 
+use MikoPBX\Common\Models\PbxSettings;
 use MikoPBX\Modules\Setup\PbxExtensionSetupBase;
 use Modules\ModulePT1CCore\Models\ModulePT1CCore;
 
@@ -69,15 +70,6 @@ class PbxExtensionSetup extends PbxExtensionSetupBase
         return $result;
     }
 
-    /**
-     * Create folders on PBX system and apply rights
-     *
-     * @return bool result of installation
-     */
-    public function installFiles(): bool
-    {
-        return parent::installFiles();
-    }
 
     /**
      * Unregister module on PbxExtensionModules,
@@ -102,5 +94,31 @@ class PbxExtensionSetup extends PbxExtensionSetupBase
             $this->messages[] = 'Delete module extension failure: '.$settings->getMessages();
         }
         return $result;
+    }
+
+    /**
+     * Adds the module to the sidebar menu.
+     * @see https://docs.mikopbx.com/mikopbx-development/module-developement/module-installer#addtosidebar
+     *
+     * @return bool The result of the addition process.
+     */
+    public function addToSidebar(): bool
+    {
+        $menuSettingsKey           = "AdditionalMenuItem{$this->moduleUniqueID}";
+        $menuSettings              = PbxSettings::findFirstByKey($menuSettingsKey);
+        if ($menuSettings === null) {
+            $menuSettings      = new PbxSettings();
+            $menuSettings->key = $menuSettingsKey;
+        }
+        $value               = [
+            'uniqid'        => $this->moduleUniqueID,
+            'group'         => 'integrations',
+            'iconClass'     => 'puzzle',
+            'caption'       => "Breadcrumb{$this->moduleUniqueID}",
+            'showAtSidebar' => true,
+        ];
+        $menuSettings->value = json_encode($value);
+
+        return $menuSettings->save();
     }
 }

@@ -486,7 +486,7 @@ class DialPlanAppsMikoPBX
                 'bind'    => [
                     'linkedid' => null,
                 ],
-                'limit'   => 300,
+                'limit'   => 3000,
             ];
             $filter['add_pack_query']      = $add_query;
             $filter['miko_result_in_file'] = $miko_result_in_file;

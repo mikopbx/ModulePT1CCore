@@ -5,12 +5,13 @@
  * Proprietary and confidential
  * Written by Alexey Portnov, 11 2018
  */
+
+
 namespace Modules\ModulePT1CCore\App\Controllers;
 use MikoPBX\AdminCabinet\Controllers\BaseController;
 use MikoPBX\Modules\PbxExtensionUtils;
 use Modules\ModulePT1CCore\App\Forms\ModulePT1CCoreForm;
 use Modules\ModulePT1CCore\Models\ModulePT1CCore;
-use MikoPBX\Common\Models\Providers;
 
 class ModulePT1CCoreController extends BaseController
 {

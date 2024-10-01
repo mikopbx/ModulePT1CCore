@@ -8,7 +8,6 @@
 
 namespace Modules\ModulePT1CCore\Lib\RestAPI\Controllers;
 use MikoPBX\Core\System\BeanstalkClient;
-use MikoPBX\Core\System\Util;
 use MikoPBX\Core\Workers\WorkerCdr;
 use MikoPBX\PBXCoreREST\Controllers\BaseController;
 

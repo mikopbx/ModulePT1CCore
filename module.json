@@ -7,5 +7,10 @@
   "wiki_links": {
     "ru": {"https://wiki.mikopbx.com/module-p-t1-c-core": "https://wiki.miko.ru/astpanel"},
     "en": {"https://wiki.mikopbx.com/module-p-t1-c-core": "https://wiki.miko.ru/astpanel"}
+  },
+  "release_settings": {
+    "publish_release": true,
+    "changelog_enabled": true,
+    "create_github_release": true
   }
 }

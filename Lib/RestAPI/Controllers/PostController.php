@@ -26,7 +26,7 @@
 
 namespace Modules\ModulePT1CCore\Lib\RestAPI\Controllers;
 
-use MikoPBX\Common\Providers\BeanstalkConnectionWorkerApiProvider;
+// use MikoPBX\Common\Providers\BeanstalkConnectionWorkerApiProvider; //DEPRICATED
 use MikoPBX\Core\System\Util;
 use MikoPBX\PBXCoreREST\Controllers\BaseController;
 use MikoPBX\PBXCoreREST\Lib\FilesManagementProcessor;

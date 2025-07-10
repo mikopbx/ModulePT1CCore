@@ -10,6 +10,8 @@ namespace Modules\ModulePT1CCore\Lib\RestAPI\Controllers;
 use MikoPBX\Core\System\BeanstalkClient;
 use MikoPBX\Core\Workers\WorkerCdr;
 use MikoPBX\PBXCoreREST\Controllers\BaseController;
+use Modules\ModuleCleanRecords\Models\CdrRecordsData;
+use Modules\ModuleNotifier\Lib\Providers\CdrDbProvider;
 
 class GetController extends BaseController
 {
@@ -57,6 +59,58 @@ class GetController extends BaseController
             $xml_output .= '</cdr-table-askozia>';
             $this->response->setContent($xml_output);
         }
+        $this->response->sendRaw();
+    }
+
+    /**
+     * Получаем список файлов записей по идентификаторам.
+     * curl 'http://127.0.0.1/pbxcore/api/cdr/records-path?id[]=mikopbx-1751624009.210&id[]=mikopbx-1751622380.183&id[]=mikopbx-1751377388.208'
+     * @return void
+     */
+    public function getRecordsPathByIdAction(): void
+    {
+        $id = $this->request->get('id');
+        if(is_string($id)){
+            $id = [$id];
+        }
+        $result = array_fill_keys($id, []);
+        $filter = [
+            'columns' => 'linkedid,recordingfile,start,answer,src_num,dst_num',
+            'linkedid IN ({linkedid:array}) AND recordingfile <> ""',
+            'bind'                => [
+                'linkedid' => $id
+            ],
+            'miko_result_in_file' => true,
+        ];
+
+        $client  = new BeanstalkClient(WorkerCdr::SELECT_CDR_TUBE);
+        $message = $client->request(json_encode($filter), 2);
+        if ($message === false) {
+            $this->response->setContent('');
+        } else {
+            $filename   = json_decode($message, true);
+            $arr_data = [];
+            if (is_string($filename) && file_exists($filename)) {
+                $arr_data = json_decode(file_get_contents($filename), true);
+                @unlink($filename);
+            }
+            foreach ($arr_data as $cdrData){
+                if(!file_exists($cdrData['recordingfile'])){
+                    continue;
+                }
+                // Создаём объект DateTime
+                $date = \DateTime::createFromFormat('Y-m-d H:i:s.u', $cdrData['start']);
+                $formatted = $date->format('Y-m-d_H-i-s');
+                $result[$cdrData['linkedid']][] = [
+                    'file' => $cdrData['recordingfile'],
+                    'start' => $formatted,
+                    'src' => $cdrData['src_num'],
+                    'dst' => $cdrData['dst_num']
+                ];
+            }
+
+        }
+        print_r(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         $this->response->sendRaw();
     }
 

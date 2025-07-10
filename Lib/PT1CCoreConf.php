@@ -194,6 +194,7 @@ class PT1CCoreConf extends ConfigClass
     public function getPBXCoreRESTAdditionalRoutes(): array
     {
         return [
+            [GetController::class, 'getRecordsPathByIdAction', '/pbxcore/api/cdr/records-path', 'get', '/', true],
             [GetController::class, 'getDataAction', '/pbxcore/api/cdr/get_data', 'get', '/', true],
             [GetController::class, 'recordsAction', '/pbxcore/api/cdr/records', 'get', '/', true],
             [PostController::class,'callAction',    '/pbxcore/api/fax/upload/{actionName}',   'post','/', true],

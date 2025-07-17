@@ -10,8 +10,6 @@ namespace Modules\ModulePT1CCore\Lib\RestAPI\Controllers;
 use MikoPBX\Core\System\BeanstalkClient;
 use MikoPBX\Core\Workers\WorkerCdr;
 use MikoPBX\PBXCoreREST\Controllers\BaseController;
-use Modules\ModuleCleanRecords\Models\CdrRecordsData;
-use Modules\ModuleNotifier\Lib\Providers\CdrDbProvider;
 
 class GetController extends BaseController
 {

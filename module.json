@@ -3,7 +3,7 @@
   "moduleUniqueID":"ModulePT1CCore",
   "support_email": "help@miko.ru",
   "version": "%ModuleVersion%",
-  "min_pbx_version": "2023.2.150",
+  "min_pbx_version": "2025.1.1",
   "wiki_links": {
     "ru": {"https://wiki.mikopbx.com/module-p-t1-c-core": "https://wiki.miko.ru/astpanel"},
     "en": {"https://wiki.mikopbx.com/module-p-t1-c-core": "https://wiki.miko.ru/astpanel"}

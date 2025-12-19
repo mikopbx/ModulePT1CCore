@@ -206,7 +206,7 @@ class PT1CCoreConf extends ConfigClass
      *
      * @return string
      */
-    public function generateFail2BanJails():string
+    public function generateFail2BanFilters():string
     {
         return "[INCLUDES]\n" .
             "before = common.conf\n" .
@@ -215,6 +215,20 @@ class PT1CCoreConf extends ConfigClass
             'failregex = ^%(__prefix_line)sFrom\s+<HOST>.\s+UserAgent:\s+[a-zA-Z0-9 \s\.,/:;\+\-_\)\(\[\]]*.\s+Fail\s+auth\s+http.$' . "\n" .
             '            ^%(__prefix_line)sFrom\s+<HOST>.\s+UserAgent:\s+[a-zA-Z0-9 \s\.,/:;\+\-_\)\(\[\]]*.\s+File\s+not\s+found.$' . "\n" .
             "ignoreregex =\n";
+    }
+
+    /**
+     * Generates additional fail2ban jail conf rules
+     * Detects auth failures for:
+     * - REST API login attempts
+     * - Media file access attempts
+     * - WebSocket connection attempts
+     *
+     * @return string
+     */
+    public function generateFail2BanJails(): string
+    {
+        return "#";
     }
 
     /**

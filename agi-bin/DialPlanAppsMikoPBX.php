@@ -73,7 +73,10 @@ class DialPlanAppsMikoPBX
             $res_data = json_decode($q_res_data, true, 512, JSON_THROW_ON_ERROR);
             $this->app_10000666_777($res_data);
         } elseif ('10000109' === $this->exten) {
-            $res     = Extensions::findFirst("number='{$this->vars['number']}'");
+            $res     = Extensions::findFirst([
+                'conditions' => 'number = :number:',
+                'bind' => ['number' => $this->vars['number']],
+            ]);
             $context = ($res !== null) ? 'all_peers' : '';
             $this->UserEvent(
                 "GetContest,chan1c:{$this->vars['tehnology']}/{$this->vars['number']},peercontext:{$context}"
@@ -212,13 +215,19 @@ class DialPlanAppsMikoPBX
         $res      = $settings['res']??'';
         $auth     = $settings['auth']??'';
 
-        $zapros = "SELECT" . " recordingfile FROM cdr WHERE linkedid = \"{$id}\" GROUP BY recordingfile";
-        $output = [];
         $cdr_db = dirname(CdrDb::getPathToDB()) . '/master.db';
         if ( ! file_exists($cdr_db)) {
             return '';
         }
-        exec("sqlite3 '$cdr_db' '{$zapros}'", $output);
+
+        // Use PDO with prepared statement instead of exec("sqlite3 ...")
+        $pdo = new \PDO('sqlite:' . $cdr_db);
+        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $stmt = $pdo->prepare('SELECT recordingfile FROM cdr WHERE linkedid = :linkedid GROUP BY recordingfile');
+        $stmt->bindValue(':linkedid', $id, \PDO::PARAM_STR);
+        $stmt->execute();
+        $output = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
         $arr_files = [];
         foreach ($output as $_data) {
             if (empty($_data)) {
@@ -226,22 +235,42 @@ class DialPlanAppsMikoPBX
             }
             $fname = "{$_data}.wav";
             if (in_array($fname, $arr_files, true)) {
-                // Файл уже обработали ранее успешно.
                 continue;
             }
             if (file_exists("{$fname}.empty")) {
-                // Уже пытались скачать файл. Файл не найден на другой АТС.
                 continue;
             }
             if ( ! file_exists($fname)) {
                 Util::mwMkdir(dirname($_data));
-                exec("curl  -s -f 'http://{$host}{$res}{$_data}' -u {$auth} -I", $curl_output);
-                if (stripos(implode('', $curl_output), 'attachment;') === false) {
+
+                // Use PHP cURL API instead of exec("curl ...")
+                $url = 'http://' . $host . $res . $_data;
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_USERPWD, $auth);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FAILONERROR, true);
+                curl_setopt($ch, CURLOPT_NOBODY, true);
+                curl_setopt($ch, CURLOPT_HEADER, true);
+                $headResponse = curl_exec($ch);
+                curl_close($ch);
+
+                if ($headResponse === false || stripos($headResponse, 'attachment;') === false) {
                     file_put_contents("{$fname}.empty", '');
                     continue;
                 }
-                exec("curl -s -f 'http://{$host}{$res}{$_data}' -u {$auth} --output '{$fname}'");
-                exec("/sbin/wav2mp3.sh '{$_data}'");
+
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_USERPWD, $auth);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FAILONERROR, true);
+                $fileContent = curl_exec($ch);
+                curl_close($ch);
+
+                if ($fileContent !== false) {
+                    file_put_contents($fname, $fileContent);
+                    $wavPath = escapeshellarg($_data);
+                    exec("/sbin/wav2mp3.sh {$wavPath}");
+                }
             }
             $arr_files[] = $fname;
         }

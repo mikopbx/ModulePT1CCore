@@ -46,9 +46,10 @@ class PT1CCoreConf extends ConfigClass
         if (is_file('/var/etc/http_auth')) {
             return;
         }
-        $user_name = md5(random_bytes(20));
-        $pass      = md5(random_bytes(12));
+        $user_name = bin2hex(random_bytes(16));
+        $pass      = bin2hex(random_bytes(16));
         file_put_contents('/var/etc/http_auth', "{$user_name}:{$pass}");
+        chmod('/var/etc/http_auth', 0600);
     }
 
 

@@ -55,11 +55,33 @@ class ModulePT1CCoreController extends BaseController
     /**
      * Save settings AJAX action
      */
+    /**
+     * Whitelist of fields allowed for mass assignment.
+     */
+    private const ALLOWED_FIELDS = [
+        'interception_extension',
+        'conference_extension',
+        'get_peer_info_extension',
+        'get_auth_extension',
+        'get_statuses_extension',
+        'get_cdr_extension',
+        'listen_recordings_extension',
+        'get_recordings_extension',
+    ];
+
     public function saveAction() :void
     {
         if ( ! $this->request->isPost()) {
             return;
         }
+
+        // CSRF protection (compatible with Phalcon 4 and 5)
+        if ($this->di->has('security') && !$this->security->checkToken()) {
+            $this->flash->error('Invalid CSRF token');
+            $this->view->success = false;
+            return;
+        }
+
         $data   = $this->request->getPost();
         $record = ModulePT1CCore::findFirst();
 
@@ -67,24 +89,9 @@ class ModulePT1CCoreController extends BaseController
             $record = new ModulePT1CCore();
         }
         $this->db->begin();
-        foreach ($record as $key => $value) {
-            switch ($key) {
-                case 'id':
-                    break;
-                case 'checkbox_field':
-                case 'toggle_field':
-                    if (array_key_exists($key, $data)) {
-                        $record->$key = ($data[$key] === 'on') ? '1' : '0';
-                    } else {
-                        $record->$key = '0';
-                    }
-                    break;
-                default:
-                    if (array_key_exists($key, $data)) {
-                        $record->$key = $data[$key];
-                    } else {
-                        $record->$key = '';
-                    }
+        foreach (self::ALLOWED_FIELDS as $key) {
+            if (array_key_exists($key, $data)) {
+                $record->$key = $data[$key];
             }
         }
 

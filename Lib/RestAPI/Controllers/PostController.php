@@ -31,7 +31,6 @@ use MikoPBX\Core\System\Util;
 use MikoPBX\PBXCoreREST\Controllers\BaseController;
 use MikoPBX\PBXCoreREST\Lib\FilesManagementProcessor;
 use MikoPBX\PBXCoreREST\Lib\PbxExtensionsProcessor;
-use Pheanstalk\Pheanstalk;
 
 /**
  * /api/upload/{name}
@@ -80,7 +79,7 @@ class PostController extends BaseController
         $payload = null,
         string $modulename='',
         int $maxTimeout = 10,
-        int $priority = Pheanstalk::DEFAULT_PRIORITY): void
+        int $priority = 1024): void
     {
         $requestMessage = [
             'processor' => $processor,

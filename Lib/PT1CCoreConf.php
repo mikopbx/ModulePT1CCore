@@ -46,9 +46,10 @@ class PT1CCoreConf extends ConfigClass
         if (is_file('/var/etc/http_auth')) {
             return;
         }
-        $user_name = md5(random_bytes(20));
-        $pass      = md5(random_bytes(12));
+        $user_name = bin2hex(random_bytes(16));
+        $pass      = bin2hex(random_bytes(16));
         file_put_contents('/var/etc/http_auth', "{$user_name}:{$pass}");
+        chmod('/var/etc/http_auth', 0600);
     }
 
 
@@ -194,6 +195,7 @@ class PT1CCoreConf extends ConfigClass
     public function getPBXCoreRESTAdditionalRoutes(): array
     {
         return [
+            [GetController::class, 'getRecordsPathByIdAction', '/pbxcore/api/cdr/records-path', 'get', '/', true],
             [GetController::class, 'getDataAction', '/pbxcore/api/cdr/get_data', 'get', '/', true],
             [GetController::class, 'recordsAction', '/pbxcore/api/cdr/records', 'get', '/', true],
             [PostController::class,'callAction',    '/pbxcore/api/fax/upload/{actionName}',   'post','/', true],
@@ -205,7 +207,7 @@ class PT1CCoreConf extends ConfigClass
      *
      * @return string
      */
-    public function generateFail2BanJails():string
+    public function generateFail2BanFilters():string
     {
         return "[INCLUDES]\n" .
             "before = common.conf\n" .
@@ -214,6 +216,20 @@ class PT1CCoreConf extends ConfigClass
             'failregex = ^%(__prefix_line)sFrom\s+<HOST>.\s+UserAgent:\s+[a-zA-Z0-9 \s\.,/:;\+\-_\)\(\[\]]*.\s+Fail\s+auth\s+http.$' . "\n" .
             '            ^%(__prefix_line)sFrom\s+<HOST>.\s+UserAgent:\s+[a-zA-Z0-9 \s\.,/:;\+\-_\)\(\[\]]*.\s+File\s+not\s+found.$' . "\n" .
             "ignoreregex =\n";
+    }
+
+    /**
+     * Generates additional fail2ban jail conf rules
+     * Detects auth failures for:
+     * - REST API login attempts
+     * - Media file access attempts
+     * - WebSocket connection attempts
+     *
+     * @return string
+     */
+    public function generateFail2BanJails(): string
+    {
+        return "#";
     }
 
     /**

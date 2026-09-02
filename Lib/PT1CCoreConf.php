@@ -74,6 +74,11 @@ class PT1CCoreConf extends ConfigClass
         $conf .= 'same => n,Dial(LOCAL/${RedirectNumber}@internal/n,600,tT)' . "\n\t";
         $conf .= 'same => n,Hangup()' . "\n\n";
 
+        $conf .= 'exten => 10000105,1,ExecIf($["${PICKUP_CHAN_ID}x" = "x"]?Hangup())' . "\n\t";
+        $conf .= 'same => n,Set(pt1c_dnid=${EXTEN})' . "\n\t";
+        $conf .= 'same => n,PickupChan(${PICKUP_CHAN_ID})' . "\n\t";
+        $conf .= 'same => n,Hangup()' . "\n\n";
+
         $conf .= 'exten => 10000107,1,Answer()' . "\n\t";
         $conf .= 'same => n,Set(CHANNEL(hangup_handler_wipe)=hangup_handler_meetme,s,1)' . "\n\t";
         $conf .= 'same => n,AGI(cdr_connector.php,meetme_dial)' . "\n\t";

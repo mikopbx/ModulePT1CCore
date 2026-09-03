@@ -60,6 +60,7 @@ namespace {
 
     $first = $config->generateManagerConf();
     $nginxLocation = $config->createNginxLocations();
+    clearstatcache(true, $config->httpAuthFile());
     $httpAuthPermissions = fileperms($config->httpAuthFile()) & 0777;
     $secret = trim(file_get_contents($config->secretFile()));
     $permissions = fileperms($config->secretFile()) & 0777;

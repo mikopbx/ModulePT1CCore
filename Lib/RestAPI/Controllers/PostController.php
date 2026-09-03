@@ -26,7 +26,7 @@
 
 namespace Modules\ModulePT1CCore\Lib\RestAPI\Controllers;
 
-// use MikoPBX\Common\Providers\BeanstalkConnectionWorkerApiProvider; //DEPRICATED
+use MikoPBX\Common\Providers\BeanstalkConnectionWorkerApiProvider;
 use MikoPBX\Core\System\Util;
 use MikoPBX\PBXCoreREST\Controllers\BaseController;
 use MikoPBX\PBXCoreREST\Lib\FilesManagementProcessor;
@@ -45,8 +45,9 @@ class PostController extends BaseController
         $data           = [];
         $data['result'] = 'ERROR';
         $data   = $this->request->getPost();
+        $hasFiles = $this->request->hasFiles() > 0;
 
-        if ($this->request->hasFiles() > 0) {
+        if ($hasFiles) {
             $data = [
                 'resumableFilename'    => $this->request->getPost('resumableFilename'),
                 'resumableIdentifier'  => $this->request->getPost('resumableIdentifier'),
@@ -69,9 +70,27 @@ class PostController extends BaseController
                     return;
                 }
             }
-            $actionName = 'uploadFile';
+        }
+        $actionName = self::normalizeFileAction((string)$actionName, $hasFiles);
+        if ($actionName === null) {
+            $this->sendError(400, 'Unsupported file action');
+            return;
         }
         $this->sendRequestToBackendWorker(FilesManagementProcessor::class, $actionName, $data);
+    }
+
+    /**
+     * Maps the legacy upload API to the only backend file actions it needs.
+     */
+    private static function normalizeFileAction(string $actionName, bool $hasFiles): ?string
+    {
+        if ($hasFiles) {
+            return 'uploadFile';
+        }
+        if ($actionName === 'status' || $actionName === 'statusUploadFile') {
+            return 'statusUploadFile';
+        }
+        return null;
     }
 
     public function sendRequestToBackendWorker(  string $processor,
@@ -81,6 +100,18 @@ class PostController extends BaseController
         int $maxTimeout = 10,
         int $priority = 1024): void
     {
+        if (method_exists(get_parent_class($this), 'sendRequestToBackendWorker')) {
+            parent::sendRequestToBackendWorker(
+                $processor,
+                $actionName,
+                $payload,
+                $modulename,
+                $maxTimeout,
+                $priority
+            );
+            return;
+        }
+
         $requestMessage = [
             'processor' => $processor,
             'data'      => $payload,

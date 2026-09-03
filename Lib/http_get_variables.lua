@@ -40,11 +40,20 @@ function lines_from(file)
 end
 
 local lines = lines_from('/var/etc/http_auth')
-local auth_string = "Basic "..ngx.encode_base64(lines[1])
+local headers = ngx.req.get_headers()
+local authorization = ngx.var.pt1c_authorization or ngx.var.http_authorization
+    or headers["Authorization"] or headers["authorization"]
+if type(authorization) ~= "string" then
+    local raw_headers = ngx.req.raw_header()
+    authorization = string.match(raw_headers or "", "\r\n[Aa][Uu][Tt][Hh][Oo][Rr][Ii][Zz][Aa][Tt][Ii][Oo][Nn]:[ \t]*([^\r\n]+)")
+end
+local encoded_auth = type(authorization) == "string" and string.match(authorization, "^[Bb][Aa][Ss][Ii][Cc]%s+(.+)$") or nil
+local decoded_auth = encoded_auth and ngx.decode_base64(encoded_auth) or nil
 
 -- Проверка авторизации
-if auth_string ~= ngx.req.get_headers()["Authorization"] then
+if type(lines[1]) ~= "string" or decoded_auth ~= lines[1] then
     ngx.log(ngx.WARN)
+    ngx.status = ngx.HTTP_FORBIDDEN
     ngx.say('The user isn\'t authenticated.')
     ngx.exit(ngx.HTTP_FORBIDDEN)
 end
@@ -58,6 +67,24 @@ end
 
 local channel       = args["channel"];
 local str_variables = args["variables"];
+
+local function invalid_ami_value(value, max_length, pattern)
+    return type(value) ~= "string"
+        or #value == 0
+        or #value > max_length
+        or string.find(value, "[\r\n%z]") ~= nil
+        or string.match(value, pattern) == nil
+end
+
+local _, variable_count = string.gsub(str_variables or "", ",", "")
+if invalid_ami_value(channel, 255, "^[%w_@/%.:%+%-]+$")
+    or invalid_ami_value(str_variables, 1024, "^[%w_(),%./:@%+%-]+$")
+    or variable_count >= 32 then
+    ngx.status = ngx.HTTP_BAD_REQUEST
+    ngx.say('Invalid channel or variables.')
+    ngx.exit(ngx.HTTP_BAD_REQUEST)
+end
+
 -- TODO -- Прорим кэш данные.
 local asterisk_vars = ngx.shared.asterisk_vars
 if asterisk_vars ~= nill then
@@ -79,7 +106,15 @@ if not ok then
     ngx.exit(ngx.HTTP_OK)
 end
 
-sock:send("Action: Login\r\nUsername: phpagi\r\nSecret: phpagi\r\nEvents: off\r\n\r\n")
+local ami_secret_lines = lines_from('/var/etc/pt1ccore_ami_secret')
+local ami_secret = ami_secret_lines[1]
+if type(ami_secret) ~= "string" or string.match(ami_secret, "^[a-f0-9]+$") == nil or #ami_secret ~= 48 then
+    ngx.say('New Structure("Result,Msg", false, "AMI credentials unavailable...")')
+    sock:close()
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
+
+sock:send("Action: Login\r\nUsername: pt1ccore_getvar\r\nSecret: "..ami_secret.."\r\nEvents: off\r\n\r\n")
 
 local reader = sock:receiveuntil("\r\n\r\n")
 local data   = reader()
@@ -130,5 +165,3 @@ ngx.say(result)
 asterisk_vars:set(""..channel..str_variables, result, 0.5)
 asterisk_vars:flush_expired()
 ngx.exit(ngx.HTTP_OK)
-
-

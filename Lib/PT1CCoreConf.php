@@ -36,6 +36,9 @@ use Modules\ModulePT1CCore\Lib\RestAPI\Controllers\PostController;
 
 class PT1CCoreConf extends ConfigClass
 {
+    private const AMI_USERNAME = 'pt1ccore_getvar';
+    private const AMI_SECRET_FILE = '/var/etc/pt1ccore_ami_secret';
+
 
     /**
      * Будет вызван после старта asterisk.
@@ -43,13 +46,59 @@ class PT1CCoreConf extends ConfigClass
      */
     public function onAfterPbxStarted(): void
     {
-        if (is_file('/var/etc/http_auth')) {
+        $httpAuthFile = $this->getHttpAuthFile();
+        if (!is_file($httpAuthFile)) {
+            $user_name = bin2hex(random_bytes(16));
+            $pass      = bin2hex(random_bytes(16));
+            file_put_contents($httpAuthFile, "{$user_name}:{$pass}", LOCK_EX);
+        }
+        $this->prepareHttpAuthFile();
+    }
+
+    /**
+     * Generates a localhost-only AMI user for the Lua GetVar endpoint.
+     */
+    public function generateManagerConf(): string
+    {
+        $secretFile = $this->getAmiSecretFile();
+        $secret = is_file($secretFile) ? trim((string)file_get_contents($secretFile)) : '';
+        if (preg_match('/^[a-f0-9]{48}$/D', $secret) !== 1) {
+            $secret = bin2hex(random_bytes(24));
+            file_put_contents($secretFile, $secret, LOCK_EX);
+        }
+        chmod($secretFile, 0600);
+
+        return '[' . self::AMI_USERNAME . "]\n"
+            . "secret={$secret}\n"
+            . "deny=0.0.0.0/0.0.0.0\n"
+            . "permit=127.0.0.1/255.255.255.255\n"
+            . "read=call\n"
+            . "write=call\n\n";
+    }
+
+    protected function getAmiSecretFile(): string
+    {
+        return self::AMI_SECRET_FILE;
+    }
+
+    protected function getHttpAuthFile(): string
+    {
+        return '/var/etc/http_auth';
+    }
+
+    protected function getNginxGroup()
+    {
+        return 'www';
+    }
+
+    private function prepareHttpAuthFile(): void
+    {
+        $httpAuthFile = $this->getHttpAuthFile();
+        if (!is_file($httpAuthFile)) {
             return;
         }
-        $user_name = bin2hex(random_bytes(16));
-        $pass      = bin2hex(random_bytes(16));
-        file_put_contents('/var/etc/http_auth', "{$user_name}:{$pass}");
-        chmod('/var/etc/http_auth', 0600);
+        chgrp($httpAuthFile, $this->getNginxGroup());
+        chmod($httpAuthFile, 0640);
     }
 
 
@@ -177,9 +226,11 @@ class PT1CCoreConf extends ConfigClass
      */
     public function createNginxLocations(): string
     {
+        $this->prepareHttpAuthFile();
         $luaScriptPath = $this->moduleDir.'/Lib/http_get_variables.lua';
         return "location /pbxcore/api/miko_ajam/getvar {
             default_type 'text/plain';
+            set \$pt1c_authorization \$http_authorization;
             content_by_lua_file {$luaScriptPath};
             keepalive_timeout 0;
 		}";
